@@ -67,9 +67,22 @@
 	float: left;
 	padding-right: 10px;
 }
+.y-reset-link,.y-create-account-link {
+	font-size: 15px;
+}
+.y-reset-link {
+	margin-bottom: 5px;
+}
+#y-logo-registration {
+	float: none;
+}
 .y-side-box {
 	width: 36%;
 	float: right;
+}
+.y-red {
+	color: red;
+	font-weight: bold;
 }
 
 .y-already-logged-in {
@@ -198,3 +211,4 @@
 .analytics { background: url('../img/spriteSheet.png') no-repeat  -189px -154px; }
 .seo { background: url('../img/spriteSheet.png') no-repeat  -189px -293px; }
 .yotpo_language_code_text {text-transform: lowercase;}
+.y-login-link {margin-top: 20px;}

@@ -22,6 +22,8 @@ class Yotpo extends Module
 		$version_mask = explode('.', _PS_VERSION_, 3);
 		$version_test = $version_mask[0] > 0 && $version_mask[1] > 4;
 		$this->name = 'yotpo';
+		$this->registrationState = null;
+		$this->storeEmail = Configuration::get('PS_SHOP_EMAIL');
 		$this->tab = $version_test ? 'advertising_marketing' : 'Reviews';
 		$this->version = '1.4.3';
 		if ($version_test)
@@ -32,9 +34,9 @@ class Yotpo extends Module
 		 
 		$this->displayName = $this->l('Yotpo - Social Reviews and Testimonials');
 		$this->description = $this->l('The #1 reviews add-on for SMBs. Generate beautiful, trusted reviews for your shop.');
+
 		$this->_yotpo_module_path = _PS_MODULE_DIR_.$this->name;
 		$this->db_version = '1.1';
-		
 		if (!Configuration::get('yotpo_app_key'))
 			$this->warning = $this->l('Set your API key in order the Yotpo module to work correctly');	
 
@@ -43,10 +45,10 @@ class Yotpo extends Module
 		if(file_exists($this->_yotpo_module_path . '/YotpoSnippetCache.php')) {
 			include_once($this->_yotpo_module_path.'/YotpoSnippetCache.php');	
 		}	
-		    /* Backward compatibility */
+			    /* Backward compatibility */
 		if (version_compare(_PS_VERSION_, '1.5') < 0) {
     		require(_PS_MODULE_DIR_.$this->name.'/backward_compatibility/backward.php');
-    	}
+    	}				
 	}
 
 	public function getAcceptedMapStatuses()
@@ -60,7 +62,7 @@ class Yotpo extends Module
 		
 		if(!is_null($selected_statuses) && !empty($selected_statuses)) {
 			return $selected_statuses;
-		}			
+		}
 		if (is_null(self::$_MAP_STATUS))
 		{
 			self::$_MAP_STATUS = array();
@@ -90,14 +92,12 @@ class Yotpo extends Module
 				$this->setError($this->l('Can\'t include file '.$this->_yotpo_module_path .$file));
 
 		if ((is_array($this->_errors) && count($this->_errors) > 0) || parent::install() == false 	||
-			!$this->registerHook('productfooter') 			|| !$this->registerHook('postUpdateOrderStatus')||
-			!$this->registerHook('extraLeft') 				|| !$this->registerHook('extraRight') 			||
-			!$this->registerHook('productTab') 				|| !$this->registerHook('productTabContent') 	|| 
-			!$this->registerHook('header')					|| !$this->registerHook('orderConfirmation')	|| 
-			!YotpoSnippetCache::createDB()
-			) 
+			!$this->registerHook('productfooter') 	|| !$this->registerHook('postUpdateOrderStatus')||
+			!$this->registerHook('extraLeft') 		|| !$this->registerHook('extraRight') 			||
+			!$this->registerHook('productTab') 		|| !$this->registerHook('productTabContent') 	|| 
+			!$this->registerHook('header')			|| !$this->registerHook('orderConfirmation')	|| !YotpoSnippetCache::createDB()) 
 			return false;
-			
+
 		if(version_compare(_PS_VERSION_, '1.5') >= 0 && (!$this->registerHook('yotpoProductAverageScore') ||
 		   !$this->registerHook('yotpoProductReviewCount'))) {
 		   		return false;
@@ -116,11 +116,11 @@ class Yotpo extends Module
 		
 		Configuration::updateValue('yotpo_rich_snippet_cache_created', 1);
 		Configuration::updateValue('yotpo_db_version', $this->db_version);
-		
+
 		Configuration::updateValue('yotpo_map_status', serialize($this->getAcceptedMapStatuses()), false);
 		return true;
 	}
-    
+
 	public function hookheader()
 	{
 		$app_key = Configuration::get('yotpo_app_key');
@@ -129,20 +129,20 @@ class Yotpo extends Module
 			$smarty->assign(array('yotpoAppkey' => $app_key, 
 								  'yotpoDomain' => $this->getShopDomain(),
 								  'yotpoLanguage' => $this->getLanguage()));
-			return $this->display(__FILE__, 'views/templates/front/header.tpl');	
-		}	
-
+			
+			return $this->display(__FILE__, 'views/templates/front/header.tpl');
+		}
 	}
 
 	public function hookproductfooter($params)
 	{
-		
 		$app_key = Configuration::get('yotpo_app_key');
 		if(isset($app_key) && !empty($app_key)) {
 			$widgetLocation = Configuration::get('yotpo_widget_location');
-			if (Configuration::get('yotpo_widget_location') == 'footer')
+			if (Configuration::get('yotpo_widget_location') == 'footer') {
 				return $this->showWidget($params['product']);
-						
+			}
+		
 		}
 	}
 
@@ -159,27 +159,28 @@ class Yotpo extends Module
 	public function hookProductTab()
 	{
 		$app_key = Configuration::get('yotpo_app_key');
-		if(isset($app_key) && !empty($app_key)) {		
+		if(isset($app_key) && !empty($app_key)) {
 			if ($this->parseProductId() != null && Configuration::get('yotpo_widget_location') == 'tab') {
 				$smarty = $this->context->smarty;
 				$smarty->assign(array('yotpoVersionPost16' => version_compare(_PS_VERSION_, '1.6') >= 0, 
 					 				  'yotpoWidgetTabName' => Configuration::get('yotpo_widget_tab_name')));
 				return $this->display(__FILE__, 'views/templates/front/productTab.tpl');
-			}
+			}		
 		}
 	}
-	
+
 	public function hookProductTabContent()
 	{
 		$app_key = Configuration::get('yotpo_app_key');
-		if(isset($app_key) && !empty($app_key)) {				
+		if(isset($app_key) && !empty($app_key)) {
 			$product = $this->getPageProduct(null);
-			if ($product != null && Configuration::get('yotpo_widget_location') == 'tab') {
+			if ($product != null && Configuration::get('yotpo_widget_location') == 'tab'){
 				$this->assignProductVars($product);
 				$smarty = $this->context->smarty;
 				$smarty->assign('yotpoContentTplPath',dirname(__FILE__).'/views/templates/front/widgetDiv2.tpl');				
 				return $this->display(__FILE__, 'views/templates/front/productTabContent.tpl');	
 			}
+				
 		}
 	}
 
@@ -246,23 +247,30 @@ class Yotpo extends Module
     	Configuration::deleteByName('yotpo_rich_snippets');
     	Configuration::deleteByName('yotpo_rich_snippet_cache_created');
     	Configuration::deleteByName('yotpo_map_status');
-    	Configuration::deleteByName('yotpo_db_version');
+    	Configuration::deleteByName('yotpo_db_version');    	
     	YotpoSnippetCache::dropDB();    	
 		return parent::uninstall();
 	}
 	
 	public function getContent()
 	{
+		
 		if (isset($this->context->controller))
 			$this->context->controller->addCSS($this->_path.'/css/form.css', 'all');		
 		else
-			echo '<link rel="stylesheet" type="text/css" href="../modules/yotpo/css/form.css" />';
-
-        $force_settings = $this->processRegistrationForm() == 'b2c';
-        $this->processSettingsForm();
-        $this->displayForm($force_settings);
-
-		return '<img src="http://www.prestashop.com/modules/yotpo.png?url_site='.Tools::safeOutput($_SERVER['SERVER_NAME']).'" alt="" style="display: none;" />'.$this->_html;
+			echo '<link rel="stylesheet" type="text/css" href="../modules/yotpo/css/form.css" />';	
+		if (!Configuration::hasKey('yotpo_app_key') || Configuration::get('yotpo_app_key')=='' ) {
+			$force_settings = $this->firstStep() == 'b2c';
+		}
+	
+		if ($this->registrationState=="existing_b2b_successful") {
+			 return $this->displayB2BLoginForm();
+		}
+		else  {
+			$this->processSettingsForm();
+			$this->displayForm($force_settings);
+			return '<img src="http://www.prestashop.com/modules/yotpo.png?url_site='.Tools::safeOutput($_SERVER['SERVER_NAME']).'" alt="" style="display: none;" />'.$this->_html;
+		}
 	}
 
 	private function getProductImageUrl($id_product)
@@ -340,7 +348,8 @@ class Yotpo extends Module
 	private function showWidget($product)
 	{		
 		$this->assignProductVars($product);
-	    return $this->display(__FILE__, 'views/templates/front/widgetDiv2.tpl');		
+	    return $this->display(__FILE__, 'views/templates/front/widgetDiv2.tpl');
+		
 	}
 
 	private function assignProductVars($product = null)
@@ -378,94 +387,129 @@ class Yotpo extends Module
 	{
 		return method_exists('Tools', 'getShopDomain') ? Tools::getShopDomain(false,false) : str_replace('www.', '', $_SERVER['HTTP_HOST']);
 	}
-
-	private function processRegistrationForm()
-	{
-		if (Tools::isSubmit('yotpo_register'))
-		{
-			$email = Tools::getValue('yotpo_user_email');
-			$name = Tools::getValue('yotpo_user_name');
-			$password = Tools::getValue('yotpo_user_password');
-			$confirm = Tools::getValue('yotpo_user_confirm_password');
-			if ($email === false || $email === '')
-				return $this->prepareError($this->l('Provide valid email address'));	
-			if (Tools::strlen($password) < 6 || Tools::strlen($password) > 128)
-				return $this->prepareError($this->l('Password must be at least 6 characters'));	
-			if ($password != $confirm)
-				return $this->prepareError($this->l('Passwords are not identical'));	
-			if ($name === false || $name === '')
-				return $this->prepareError($this->l('Name is missing'));	
-
-				
-				
-			$is_mail_valid = $this->httpClient()->checkeMailAvailability($email);
-			if ($is_mail_valid['status_code'] == 200 && 
-			  	($is_mail_valid['json'] == true && $is_mail_valid['response']['available'] == true) || 
-			  	($is_mail_valid['json'] == false && preg_match("/available[\W]*(true)/",$is_mail_valid['response']) == 1))
+	
+	private function firstStepHandleB2C($response,$name) {
+		
+		$id = $response['response']['data']['id'];
+		$data = array(
+				'password'=> null,
+				'display_name'=> $name,
+				'account' => array(
+						'url' => _PS_BASE_URL_,
+						'custom_platform_name'=>null,
+						'install_step'=>8,
+						'account_platform' => array(
+								'shop_domain'=> _PS_BASE_URL_,
+								'platform_type_id'=>8,
+						)
+				)
+		);
+		$this->httpClient()->create_user_migration($id,$data);
+		$this->httpClient()->notify_user_migration($id);
+		$this->prepareError($this->l('We have sent you a confirmation email. Please check and click on the link to get your app key and secret token to fill out below.'));
+		return 'b2c';
+	}
+	
+	private function handleExistingB2BSubmit() {
+		//check if form was submitted or not , if not submitted show the error
+		
+		if (Tools::isSubmit('yotpo_register')) {
+			//check if email + password combination matches..
+			
+			$data = array(
+					'user'=> array(
+							'email' => Tools::getValue('yotpo_user_email'),
+							'password' =>  Tools::getValue('yotpo_user_password'),
+							'remember_me' => "")
+			);
+		
+			$resp = $this->httpClient()->makePostRequest(YotpoHttpClient::YOTPO_API_URL . "/users/sign_in.json", $data);
+			if (isset($resp["response"]["auth_info"]) && isset($resp["response"]["auth_info"]["code"]))
 			{
-                $response = $this->httpClient()->check_if_b2c_user($email);
-                if (empty($response['response']['data'])){
-                    $registerResponse = $this->httpClient()->register($email, $name, $password, _PS_BASE_URL_);
-                    if ($registerResponse['status_code'] == 200)
-                    {
-                        $app_key ='';
-                        $secret = '';
-                        if ($registerResponse['json'] == true)
-                            $app_key = $registerResponse['response']['app_key'];
-                        else
-                        {
-                            preg_match("/app_key[\W]*[\"'](.*?)[\"']/",$registerResponse['response'], $matches);
-                            $app_key = $matches[1];
-                            unset($matches);
-                        }
-                        $secret ='';
-                        if ($registerResponse['json'] == true)
-                            $secret = $registerResponse['response']['secret'];
-                        else
-                        {
-                            preg_match("/secret[\W]*[\"'](.*?)[\"']/",$registerResponse['response'], $matches);
-                            $secret = $matches[1];
-                        }
-                        $accountPlatformResponse = $this->httpClient()->createAcountPlatform($app_key, $secret, _PS_BASE_URL_);
-                        if ($accountPlatformResponse['status_code'] == 200)
-                        {
-                            Configuration::updateValue('yotpo_app_key', $app_key, false);
-                            Configuration::updateValue('yotpo_oauth_token', $secret, false);
-                            return $this->prepareSuccess($this->l('Account successfully created'));
-                        }
-                        else
-                            return $this->prepareError($accountPlatformResponse['status_message']);
-                    }
-                    else
-                        return $this->prepareError($registerResponse['status_message']);
-                } else {
-                    $id = $response['response']['data']['id'];
-                    $data = array(
-                        'password'=> $password,
-                        'display_name'=> $name,
-                        'account' => array(
-                            'url' => _PS_BASE_URL_,
-                            'custom_platform_name'=>null,
-                            'install_step'=>8,
-                            'account_platform' => array(
-                                'shop_domain'=> _PS_BASE_URL_,
-                                'platform_type_id'=>8,
-                            )
-                        )
-                    );
-                    $this->httpClient()->create_user_migration($id,$data);
-                    $this->httpClient()->notify_user_migration($id);
-                    $this->prepareError($this->l('We have sent you a confirmation email. Please check and click on the link to get your app key and secret token to fill out below.'));
-                    return 'b2c';
-                }
+				//show the existing b2b
+				$this->registrationState = "existing_b2b_successful";
 			}
-			else
-				return $is_mail_valid['status_code'] == 200 ? $this->prepareError($this->l('This e-mail address is already taken.')) : $this->prepareError();
+			else {
+				$smarty = $this->context->smarty;
+				$smarty->assign("hide_email_exists",true);
+			    $this->prepareError($this->l('Wrong email password combination'));
+			}
+			
+		} 
+		else {
+			//$this->prepareError($this->l('This e-mail address is already taken.'));
 		}
+			  
+	}
+	
+	private function firstStep()
+	{
+		
+		//in the new flow , the form is only shown for an existing b2b user
+		if (Tools::isSubmit('yotpo_register')) {
+			$this->handleExistingB2BSubmit();
+			return ;
+		}
+		$name = Db::getInstance()->ExecuteS('SELECT  firstname FROM ps_employee LIMIT 1');
+		$name = $name[0]["firstname"];
+		$b2b_email_response= $this->httpClient()->checkeMailAvailability($this->storeEmail);
+		if ($b2b_email_response['status_code'] == 200 && 
+		  	($b2b_email_response['json'] == true && $b2b_email_response['response']['available'] == true) || 
+		  	($b2b_email_response['json'] == false && preg_match("/available[\W]*(true)/",$b2b_email_response['response']) == 1))
+		{ //new email or existing b2c
+			$response = $this->httpClient()->check_if_b2c_user($this->storeEmail);
+                if (empty($response['response']['data'])) //new email 
+                {
+					$registerResponse = $this->httpClient()->register($this->storeEmail, $name, null, _PS_BASE_URL_);
+					if ($registerResponse['status_code'] == 200)
+					{
+						$app_key ='';
+						$secret = '';
+						if ($registerResponse['json'] == true)
+							$app_key = $registerResponse['response']['app_key'];
+						else 
+						{
+							preg_match("/app_key[\W]*[\"'](.*?)[\"']/",$registerResponse['response'], $matches);
+							$app_key = $matches[1];
+							unset($matches);
+						}
+						$secret ='';
+						if ($registerResponse['json'] == true)
+							$secret = $registerResponse['response']['secret'];
+						else 
+						{
+							preg_match("/secret[\W]*[\"'](.*?)[\"']/",$registerResponse['response'], $matches);
+							$secret = $matches[1];
+						}					
+						$accountPlatformResponse = $this->httpClient()->createAcountPlatform($app_key, $secret, _PS_BASE_URL_);
+						if ($accountPlatformResponse['status_code'] == 200)
+						{
+							Configuration::updateValue('yotpo_app_key', $app_key, false);
+							Configuration::updateValue('yotpo_oauth_token', $secret, false);
+							return $this->prepareSuccess($this->l('Account successfully created'));
+						}
+						else
+							return $this->prepareError($accountPlatformResponse['status_message']);	
+					} 
+// 					else
+// 						return $this->prepareError("bad email combination..?");
+                }
+                else
+                {
+                	return $this->firstStepHandleB2C($response,$name);
+                }
+		}
+		//existing b2b user
+		else {
+			return $this->handleExistingB2BSubmit();
+		}
+			//return $is_mail_valid['status_code'] == 200 ? $this->prepareError($this->l('This e-mail address is already taken.')) : $this->prepareError();
+		
 	}
 
 	private function processSettingsForm()
 	{
+		
 		if (Tools::isSubmit('yotpo_settings'))
 		{
 			$api_key = Tools::getValue('yotpo_app_key');
@@ -477,8 +521,7 @@ class Yotpo extends Module
 		    $language_as_site = Tools::getValue('yotpo_language_as_site');
 		    $widget_language_code = Tools::getValue('yotpo_widget_language_code');
 			$rich_snippet = Tools::getValue('yotpo_rich_snippets');
-			$map_statuses = Tools::getValue('yotpo_map_status');			
-			
+			$map_statuses = Tools::getValue('yotpo_map_status');  			
 			if ($api_key == '')
 				return $this->prepareError($this->l('Api key is missing'));	
 			if ($secret_token == '')
@@ -517,6 +560,7 @@ class Yotpo extends Module
 				if ($is_success)
 				{
 					Configuration::updateValue('yotpo_past_orders', 1, false);
+					Configuration::updateValue('YOTPO_CONFIGURATION_OK', true);
 					$this->prepareSuccess('Past orders sent successfully');
 				}	
 			}
@@ -528,7 +572,6 @@ class Yotpo extends Module
 	private function displayForm($force_settings = false)
 	{
 		$smarty = $this->context->smarty;
-
 		$smarty->assign(array('yotpo_finishedRegistration' => false, 'yotpo_allreadyUsingYotpo' => false));
 		if (Tools::isSubmit('log_in_button'))
 		{
@@ -545,16 +588,22 @@ class Yotpo extends Module
 	{
 		$smarty = $this->context->smarty;
 
-		$smarty->assign(array('yotpo_action' => $_SERVER['REQUEST_URI'], 'yotpo_email' => Tools::getValue('yotpo_user_email'),
+		$smarty->assign(array('yotpo_action' => $_SERVER['REQUEST_URI'], 'yotpo_email' => $this->storeEmail,
 		'yotpo_userName' => Tools::getValue('yotpo_user_name')));
 
-		$this->_html .= $this->display(__FILE__, 'views/templates/admin/registrationForm.tpl');
+		$this->_html .= $this->display(__FILE__, 'views/templates/admin/existing_b2b_step_1.tpl');
 
 		return $this->_html;
+	}
+	
+	private function displayB2BLoginForm() {
+		$settings_template = $this->display(__FILE__, 'views/templates/admin/existing_b2b_step_2.tpl');
+		return $this->_html .= $settings_template;
 	}
 
 	private function displaySettingsForm()
 	{
+		
 		$db_version = Configuration::get('yotpo_db_version');		
 		if(is_bool($db_version) && !$db_version) {
 			if(!Configuration::get('yotpo_rich_snippet_cache_created')) {
@@ -568,7 +617,7 @@ class Yotpo extends Module
 				Configuration::updateValue('yotpo_db_version', $this->db_version);
 			}						
 		}
-		
+
 		$smarty = $this->context->smarty;
 		$all_statuses = OrderState::getOrderStates($this->getLanguageId());
 		
@@ -586,7 +635,6 @@ class Yotpo extends Module
 		foreach ($all_statuses as &$status) {
 			$status['selected'] = in_array($status['id_order_state'], $selected_statuses) ? '1' : '0';
 		}
-		
 		$smarty->assign(array(
 		'yotpo_action' => $_SERVER['REQUEST_URI'],
 		'yotpo_appKey' => Tools::getValue('yotpo_app_key',Configuration::get('yotpo_app_key')),
@@ -600,11 +648,13 @@ class Yotpo extends Module
 	    'yotpo_language_as_site' => Configuration::get('yotpo_language_as_site'),
 		'yotpo_rich_snippets' => Configuration::get('yotpo_rich_snippets'),
 		'yotpo_all_statuses' => $all_statuses));
+		
 		$settings_template = $this->display(__FILE__, 'views/templates/admin/settingsForm.tpl');
 		if (strpos($settings_template, 'yotpo_map_enabled') != false || strpos($settings_template, 'yotpo_language_as_site') == false || strpos($settings_template, 'yotpo_rich_snippets') == false) {
 			$settings_template = $this->getNonCachedTemplate('views/templates/admin/settingsForm.tpl');	
 		}
-		$this->_html .= $settings_template;
+		
+		return $this->_html .= $settings_template;
 	}
 
 	private function getProductModel($product)
@@ -623,8 +673,7 @@ class Yotpo extends Module
 			return '';	
 
 		$result = array();
-		$lang_id = $this->getLanguageId();
-		
+		$lang_id = $this->getLanguageId(); 
 		$all_product_subs = Product::getProductCategoriesFull((int)$product->id, (int)$lang_id);
 		if (isset($all_product_subs) && count($all_product_subs) > 0)
 			foreach($all_product_subs as $subcat)
@@ -775,7 +824,7 @@ class Yotpo extends Module
 				if($result == false || $should_update_row) {			
 					$result = array();
 					$expiration_time = null;
-					$request_result = $this->httpClient()->makeRichSnippetRequest(Configuration::get('yotpo_app_key'),$product_id);
+					$request_result = $this->httpClient()->makeRichSnippetRequest(Configuration::get('yotpo_app_key'), $product_id);
 					if($request_result['status_code'] == 200) {
 						if ($request_result['json'] == true) {
 							$result['ttl'] = $request_result['response']['rich_snippet']['ttl'];
@@ -800,7 +849,8 @@ class Yotpo extends Module
 							}
 							else {
 								YotpoSnippetCache::addRichSnippetToCahce($product_id, $result);	
-							}								
+							}
+								
 						}
 					}
 				}
@@ -810,8 +860,7 @@ class Yotpo extends Module
 			}				
 		}
 		return $result;		
-	}	
-
+	}
 	private function getLanguageId(){
 		if (isset($this->context->language) && isset($this->context->language->id)) {
 			return $this->context->language->id;
@@ -819,9 +868,11 @@ class Yotpo extends Module
 		else {
 			return $this->context->cookie->id_lang;
 		}
-	}
+	}		
+	
 
-	  /*
+	
+	/*
      * deletes the cached smarty template - if needed (if the cached version template is an older version and therefore different than the current template version)
      *
      * returns the non-cached template.
