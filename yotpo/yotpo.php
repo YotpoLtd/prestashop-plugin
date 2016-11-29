@@ -562,7 +562,7 @@ class Yotpo extends Module
 				Configuration::updateValue('yotpo_rich_snippet_cache_created', 1);
 			}
 			else {
-				$this->registerHook('yotpoProductAvarageScore');
+				$this->registerHook('yotpoProductAverageScore');
 				$this->registerHook('yotpoProductReviewCount');
 				YotpoSnippetCache::updateDB();
 				Configuration::updateValue('yotpo_db_version', $this->db_version);
