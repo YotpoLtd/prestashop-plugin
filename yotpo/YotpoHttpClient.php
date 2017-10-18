@@ -72,6 +72,7 @@ class YotpoHttpClient
 	
 	public function makePostRequest($url, $data, $timeout = self::HTTP_REQUEST_TIMEOUT, $parse_result = true)
 	{		
+		$url = YotpoHttpClient::getUrlWithSupportedScheme($url);
 		$ch = curl_init($url);
 		list($is_json, $parsed_data) = YotpoHttpClient::jsonOrUrlEncode($data);    
 		$content_type = $is_json ? 'application/json' : 'application/x-www-form-urlencoded';                                                                                                                         
@@ -79,7 +80,7 @@ class YotpoHttpClient
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $parsed_data);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_CONNECTTIMEOUT ,$timeout);
-		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: '.$content_type, 'Content-length: '.Tools::strlen($parsed_data)));                                                                                                                   
+		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: '.$content_type, 'Content-length: '.strlen($parsed_data)));                                                                                                                   
 		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); /* Added by PrestaShop */
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); /* Added by PrestaShop */		
 		$result = curl_exec($ch);
@@ -95,6 +96,7 @@ class YotpoHttpClient
 
 	private function makeGetRequest($url, $data = array(), $timeout = self::HTTP_REQUEST_TIMEOUT)
 	{
+		$url = YotpoHttpClient::getUrlWithSupportedScheme($url);
 		if(count($data) > 0) {
 			$url .= '?' . http_build_query($data);	
 		}
@@ -176,7 +178,7 @@ class YotpoHttpClient
 		$count = 0;
 		if($data[0] != '{')
 			return '';
-		for ($position = 0; $position < Tools::strlen($data); $position++)
+		for ($position = 0; $position < strlen($data); $position++)
 		{
 			switch ($data[$position])
 			{
@@ -192,5 +194,14 @@ class YotpoHttpClient
 				return Tools::substr($data, 0, $position);	
 		}
 		return '';
+	}
+	
+	private static function getUrlWithSupportedScheme($url) {
+		$version = curl_version();
+		$ssl_supported = ($version['features'] & CURL_VERSION_SSL);
+		if(!$ssl_supported && parse_url($url, PHP_URL_SCHEME) == 'https') {
+			return preg_replace('/https/', 'http', $url, 1);
+		}
+		return $url;
 	}
 }

@@ -389,7 +389,7 @@ class Yotpo extends Module
 			$confirm = Tools::getValue('yotpo_user_confirm_password');
 			if ($email === false || $email === '')
 				return $this->prepareError($this->l('Provide valid email address'));	
-			if (Tools::strlen($password) < 6 || Tools::strlen($password) > 128)
+			if (Tools::strlen($password) < 6 || strlen($password) > 128)
 				return $this->prepareError($this->l('Password must be at least 6 characters'));	
 			if ($password != $confirm)
 				return $this->prepareError($this->l('Passwords are not identical'));	
