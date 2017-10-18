@@ -696,7 +696,7 @@ class Yotpo extends Module
 					$product_data['url'] = $this->getProductLink($product['id_product']); 
 					$product_data['name'] = $product['name'];
 					$product_data['image'] = $this->getProductImageUrl((int)$product['id_product']);
-					$product_data['description'] = $this->getDescritpion($product, (int)$params['id_lang']);
+					$product_data['description'] = htmlentities($this->getDescritpion($product, (int)$params['id_lang']), ENT_SUBSTITUTE);
 					$product_data['price'] = $product['price'];
 					$products_arr[(int)$product['id_product']] = $product_data;
 				}
